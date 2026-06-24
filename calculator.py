@@ -29,12 +29,34 @@ BG_FIELD      = "#1E2B1A"
 BG_HOVER      = "#243320"
 BORDER        = "#2A4030"
 TEXT1         = "#EDF5EE"
-TEXT2         = "#8FB898"
-TEXT3         = "#4A6B52"
+TEXT2         = "#B8D4BC"
+TEXT3         = "#7AAB84"
 WHITE         = "#FFFFFF"
 AMBER         = "#F59E0B"
 RED           = "#E53935"
 FONT          = "Segoe UI"
+
+# ── TEMAS ──────────────────────────────────────────────────────────────────
+THEMES = {
+    "verde": {
+        "PRIMARY":  "#00A335", "DARK":    "#00863F", "DARKER":  "#005C2B",
+        "BG":       "#0D1410", "PANEL":   "#111A14", "CARD":    "#172014",
+        "FIELD":    "#1E2B1A", "HOVER":   "#243320", "BORDER":  "#2A4030",
+        "TEXT1":    "#EDF5EE", "TEXT2":   "#B8D4BC", "TEXT3":   "#7AAB84",
+        "ICON":     "🌿",      "LABEL":   "Tema Verde",
+    },
+    "azul": {
+        "PRIMARY":  "#1E88E5", "DARK":    "#1565C0", "DARKER":  "#0D3B7A",
+        "BG":       "#0A0F1A", "PANEL":   "#0F1628", "CARD":    "#141E35",
+        "FIELD":    "#1A2540", "HOVER":   "#1F2D4D", "BORDER":  "#243560",
+        "TEXT1":    "#EEF2FF", "TEXT2":   "#A8C0E8", "TEXT3":   "#6B8FCC",
+        "ICON":     "💙",      "LABEL":   "Tema Azul",
+    },
+}
+_TEMA = "verde"
+
+def T(key):
+    return THEMES[_TEMA][key]
 
 RAID_DATA = {
     "RAID 0":  ("Striping sem redundância",     "Sem proteção. Se 1 HD falhar, perde tudo.",                   1, lambda d,t: d*t),
@@ -110,7 +132,55 @@ class App(ctk.CTk):
         badge = ctk.CTkFrame(right, fg_color=GREEN_DARKER, corner_radius=20, border_width=1, border_color=GREEN_DARK)
         badge.pack()
         ctk.CTkLabel(badge, text="  v3.0  PRO  ", font=(FONT,10,"bold"), text_color=GREEN_PRIMARY).pack(padx=4, pady=4)
-        ctk.CTkFrame(self, fg_color=GREEN_DARKER, height=2, corner_radius=0).pack(fill="x")
+
+        # Toggle de tema
+        self.btn_theme = ctk.CTkButton(
+            right, text="💙  Tema Azul",
+            command=self._toggle_theme,
+            fg_color=BG_HOVER, hover_color=GREEN_DARKER,
+            text_color=TEXT2, font=(FONT,10,"bold"),
+            corner_radius=20, height=32, width=130,
+            border_width=1, border_color=BORDER)
+        self.btn_theme.pack(pady=6)
+        self._div_line = ctk.CTkFrame(self, fg_color=GREEN_DARKER, height=2, corner_radius=0)
+        self._div_line.pack(fill="x")
+
+    def _toggle_theme(self):
+        global _TEMA, GREEN_PRIMARY, GREEN_DARK, GREEN_DARKER, GREEN_SUBTLE
+        global BG_DARK, BG_PANEL, BG_CARD, BG_FIELD, BG_HOVER, BORDER
+        global TEXT1, TEXT2, TEXT3
+
+        _TEMA = "azul" if _TEMA == "verde" else "verde"
+        t = THEMES[_TEMA]
+
+        GREEN_PRIMARY = t["PRIMARY"]; GREEN_DARK  = t["DARK"];   GREEN_DARKER = t["DARKER"]
+        BG_DARK       = t["BG"];      BG_PANEL    = t["PANEL"];  BG_CARD      = t["CARD"]
+        BG_FIELD      = t["FIELD"];   BG_HOVER    = t["HOVER"];  BORDER       = t["BORDER"]
+        TEXT1         = t["TEXT1"];   TEXT2       = t["TEXT2"];  TEXT3        = t["TEXT3"]
+
+        next_tema = "verde" if _TEMA == "azul" else "azul"
+        next_t    = THEMES[next_tema]
+        self.btn_theme.configure(
+            text=f"{next_t['ICON']}  {next_t['LABEL']}",
+            fg_color=BG_HOVER, hover_color=GREEN_DARKER,
+            text_color=TEXT2, border_color=BORDER)
+
+        # Aplicar ao app e todos os widgets
+        self.configure(fg_color=BG_DARK)
+        self._div_line.configure(fg_color=GREEN_DARKER)
+
+        # Reconstruir interface completa
+        for w in self.body.winfo_children():
+            w.destroy()
+        self._panels = {}
+        self._nav_ws = {}
+        self._layout()
+        self._sidebar()
+        self._raid_panel()
+        self._cam_panel()
+        self._combined_panel()
+        self._show("raid")
+        self.after(100, lambda: (self._calc_raid(), self._calc_cam()))
 
     def _layout(self):
         self.body = ctk.CTkFrame(self, fg_color="transparent"); self.body.pack(fill="both", expand=True)
