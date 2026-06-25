@@ -38,29 +38,11 @@ WHITE         = "#FFFFFF"
 AMBER         = "#F59E0B"
 RED           = "#E53935"
 FONT          = "Segoe UI"
-DECIMAL_TO_BINARY = 1000**4 / 1024**4  # ~0.9095 — fator de conversão fabricante → SO
+# Fatores de conversão baseados na referência técnica Seagate/IEC
+FATOR_TIB   = 1 / 1.099511628   # TB fabricante → TiB exibido no SO  (~0.9095)
+FATOR_UTIL  = 0.90               # Fator útil após formatação (NTFS/EXT4/XFS) ~1% overhead + conversão
+DECIMAL_TO_BINARY = FATOR_TIB   # alias para compatibilidade
 
-# ── TEMAS ──────────────────────────────────────────────────────────────────
-THEMES = {
-    "verde": {
-        "PRIMARY":  "#00A335", "DARK":    "#00863F", "DARKER":  "#005C2B",
-        "BG":       "#0D1410", "PANEL":   "#111A14", "CARD":    "#172014",
-        "FIELD":    "#1E2B1A", "HOVER":   "#243320", "BORDER":  "#2A4030",
-        "TEXT1":    "#EDF5EE", "TEXT2":   "#B8D4BC", "TEXT3":   "#7AAB84",
-        "ICON":     "🌿",      "LABEL":   "Tema Verde",
-    },
-    "azul": {
-        "PRIMARY":  "#1E88E5", "DARK":    "#1565C0", "DARKER":  "#0D3B7A",
-        "BG":       "#0A0F1A", "PANEL":   "#0F1628", "CARD":    "#141E35",
-        "FIELD":    "#1A2540", "HOVER":   "#1F2D4D", "BORDER":  "#243560",
-        "TEXT1":    "#EEF2FF", "TEXT2":   "#A8C0E8", "TEXT3":   "#6B8FCC",
-        "ICON":     "💙",      "LABEL":   "Tema Azul",
-    },
-}
-_TEMA = "verde"
-
-def T(key):
-    return THEMES[_TEMA][key]
 
 RAID_DATA = {
     "RAID 0":  ("Striping sem redundância",     "Sem proteção. Se 1 HD falhar, perde tudo.",                   1, lambda d,t: d*t),
@@ -142,94 +124,12 @@ class App(ctk.CTk):
         ctk.CTkLabel(info, text="INTELBRAS", font=(FONT,14,"bold"), text_color=WHITE).pack(anchor="w")
         ctk.CTkLabel(info, text="Storage & CFTV Calculator", font=(FONT,10), text_color=TEXT2).pack(anchor="w")
         right = ctk.CTkFrame(h, fg_color="transparent"); right.pack(side="right", padx=20)
-        badge = ctk.CTkFrame(right, fg_color=GREEN_DARKER, corner_radius=20, border_width=1, border_color=GREEN_DARK)
+        badge = ctk.CTkFrame(right, fg_color=GREEN_DARKER, corner_radius=14, border_width=1, border_color=GREEN_DARK)
         badge.pack()
-        ctk.CTkLabel(badge, text="  v3.0  PRO  ", font=(FONT,10,"bold"), text_color=GREEN_PRIMARY).pack(padx=4, pady=4)
+        ctk.CTkLabel(badge, text="v3.0 PRO", font=(FONT,9,"bold"), text_color=GREEN_PRIMARY).pack(padx=10, pady=5)
 
-        # Toggle de tema
-        self.btn_theme = ctk.CTkButton(
-            right, text="💙  Tema Azul",
-            command=self._toggle_theme,
-            fg_color=BG_HOVER, hover_color=GREEN_DARKER,
-            text_color=TEXT2, font=(FONT,10,"bold"),
-            corner_radius=20, height=32, width=130,
-            border_width=1, border_color=BORDER)
-        self.btn_theme.pack(pady=6)
         self._div_line = ctk.CTkFrame(self, fg_color=GREEN_DARKER, height=2, corner_radius=0)
         self._div_line.pack(fill="x")
-
-    def _toggle_theme(self):
-        global _TEMA, GREEN_PRIMARY, GREEN_DARK, GREEN_DARKER
-        global BG_DARK, BG_PANEL, BG_CARD, BG_FIELD, BG_HOVER, BORDER
-        global TEXT1, TEXT2, TEXT3
-
-        # Salvar valores atuais dos campos antes de destruir
-        try:
-            sv_nhd  = int(self.v_nhd.get())
-            sv_thd  = self.v_thd.get()
-            sv_raid = self.v_raid.get()
-            sv_hs   = int(self.v_hs.get())
-            sv_ncam = int(self.v_ncam.get())
-            sv_res  = self.v_res.get()
-            sv_comp = self.v_comp.get()
-            sv_fps  = self.v_fps.get()
-            sv_dias = int(self.v_dias.get())
-            sv_hor  = int(self.v_horas.get())
-            sv_br   = int(self.v_bitrate.get())
-        except:
-            sv_nhd=4;sv_thd="4 TB";sv_raid="RAID 5";sv_hs=0
-            sv_ncam=8;sv_res="1080p FullHD-2MP";sv_comp="H.265/H.265+"
-            sv_fps="15 fps";sv_dias=30;sv_hor=24;sv_br=2048
-
-        # Trocar tema
-        _TEMA = "azul" if _TEMA == "verde" else "verde"
-        t = THEMES[_TEMA]
-        GREEN_PRIMARY = t["PRIMARY"]; GREEN_DARK  = t["DARK"];   GREEN_DARKER = t["DARKER"]
-        BG_DARK       = t["BG"];      BG_PANEL    = t["PANEL"];  BG_CARD      = t["CARD"]
-        BG_FIELD      = t["FIELD"];   BG_HOVER    = t["HOVER"];  BORDER       = t["BORDER"]
-        TEXT1         = t["TEXT1"];   TEXT2       = t["TEXT2"];  TEXT3        = t["TEXT3"]
-
-        # Atualizar botão de toggle
-        next_t = THEMES["verde" if _TEMA == "azul" else "azul"]
-        self.btn_theme.configure(
-            text=f"{next_t['ICON']}  {next_t['LABEL']}",
-            fg_color=BG_HOVER, hover_color=GREEN_DARKER,
-            text_color=TEXT2, border_color=BORDER)
-
-        # Atualizar header e linha divisora
-        self.configure(fg_color=BG_DARK)
-        self._div_line.configure(fg_color=GREEN_DARKER)
-
-        # Destruir SOMENTE o body (sidebar + content), não o header/footer
-        self.body.destroy()
-        self._panels = {}
-        self._nav_ws = {}
-
-        # Recriar body entre header e footer
-        self.body = ctk.CTkFrame(self, fg_color="transparent")
-        # Posicionar body entre div_line e footer
-        self._div_line.pack_forget()
-        self._footer_frame.pack_forget()
-        self._div_line.pack(fill="x")
-        self.body.pack(fill="both", expand=True)
-        self._footer_frame.pack(fill="x", side="bottom")
-
-        # Reconstruir sidebar e painéis com novo tema
-        self._sidebar()
-        self._raid_panel()
-        self._cam_panel()
-        self._combined_panel()
-        self._show("raid")
-
-        # Restaurar valores
-        self.v_nhd.set(sv_nhd); self.v_thd.set(sv_thd)
-        self.v_raid.set(sv_raid); self.v_hs.set(sv_hs)
-        self.v_ncam.set(sv_ncam); self.v_res.set(sv_res)
-        self.v_comp.set(sv_comp); self.v_fps.set(sv_fps)
-        self.v_dias.set(sv_dias); self.v_horas.set(sv_hor)
-        self.v_bitrate.set(sv_br)
-        self._upd_rbw(); self._upd_nhd(); self._upd_hs(); self._upd_cam()
-        self.after(100, lambda: (self._calc_raid(), self._calc_cam()))
 
     def _layout(self):
         self.body = ctk.CTkFrame(self, fg_color="transparent"); self.body.pack(fill="both", expand=True)
@@ -463,25 +363,28 @@ class App(ctk.CTk):
         else: self.lbl_hs.configure(text=f"{cur} HDs reservados em standby para substituição automática.",text_color=GREEN_PRIMARY)
 
     def _get_tam(self):
-        """Retorna capacidade por HD em TB, com ou sem conversão decimal→binário."""
+        """Retorna capacidade útil por HD aplicando conversão decimal→binário + overhead formatação."""
         try:
             tam_fab = float(self.v_thd.get().replace(" TB",""))
         except:
             tam_fab = 4.0
         conv = getattr(self, "v_conv", None)
         if conv and conv.get():
-            tam_real = tam_fab * DECIMAL_TO_BINARY
+            # TiB exibido no SO: TB / 1.099511628 ≈ TB × 0.9095
+            tam_tib  = tam_fab * FATOR_TIB
+            # Útil real após formatação: TB × 0.90 (regra prática para NVR/DVR)
+            tam_util = tam_fab * FATOR_UTIL
         else:
-            tam_real = tam_fab
+            tam_tib  = tam_fab
+            tam_util = tam_fab
         # Atualizar labels informativos
         try:
-            pct_perda = (1 - DECIMAL_TO_BINARY) * 100
             if conv and conv.get():
                 self.lbl_cap_real.configure(
-                    text=f"Capacidade real no sistema: {tam_real:.4f} TB ({tam_real*1024:.1f} GB)",
+                    text=f"Exibido no SO: {tam_tib:.2f} TiB  |  Útil (após formatação): {tam_util:.2f} TB",
                     text_color=GREEN_PRIMARY)
                 self.lbl_cap_loss.configure(
-                    text=f"Perda de {pct_perda:.2f}% por diferença decimal/binário (padrão IEC)",
+                    text=f"Fórmula: {tam_fab} TB ÷ 1,0995 = {tam_tib:.2f} TiB  →  útil ≈ {tam_fab} × 0,90 = {tam_util:.2f} TB",
                     text_color=TEXT3)
             else:
                 self.lbl_cap_real.configure(
@@ -491,7 +394,7 @@ class App(ctk.CTk):
                     text="Atenção: valor real no sistema será menor que o anunciado",
                     text_color=TEXT3)
         except: pass
-        return tam_real
+        return tam_util
 
     def _calc_raid(self, *_):
         try: n=int(self.v_nhd.get()); hs=int(self.v_hs.get())
@@ -516,8 +419,8 @@ class App(ctk.CTk):
         col=GREEN_PRIMARY if efic>=75 else AMBER if efic>=50 else RED
         self.mc_rd.set(str(dr),"discos ativos no array")
         conv_on = getattr(self,"v_conv",None) and self.v_conv.get()
-        tam_fab = float(self.v_thd.get().replace(" TB",""))
-        rb_sub  = f"{n*tam:.2f} TB reais ({n} × {tam:.4f} TB)" if conv_on else f"{n*tam_fab:.1f} TB anunciado pelo fabricante"
+        tam_fab_val = float(self.v_thd.get().replace(" TB",""))
+        rb_sub  = f"{n} × {tam_fab_val:.0f} TB fab. = {n*tam:.2f} TB úteis" if conv_on else f"{n} × {tam_fab_val:.0f} TB (sem conversão)"
         self.mc_rb.set(fmt(n*tam), rb_sub)
         self.mc_ru.set(fmt(util),f"{util:.2f} TB disponíveis",GREEN_PRIMARY)
         self.mc_re.set(f"{efic}%","do espaço aproveitado",col)
@@ -709,6 +612,7 @@ class App(ctk.CTk):
         try:
             n     = int(self.v_nhd.get())
             tam   = self._get_tam()
+            tam_fab = float(self.v_thd.get().replace(" TB",""))
             hs    = int(self.v_hs.get())
             raid  = self.v_raid.get()
             ncam  = int(self.v_ncam.get())
@@ -748,21 +652,21 @@ class App(ctk.CTk):
         self.update()
 
         try:
-            # ── Cores ────────────────────────────────────────────────────────
-            C_GREEN   = colors.HexColor("#00A335")
-            C_GDARK   = colors.HexColor("#005C2B")
-            C_GLIGHT  = colors.HexColor("#E8F5ED")
-            C_BG      = colors.HexColor("#0D1410")
-            C_CARD    = colors.HexColor("#172014")
-            C_TEXT1   = colors.HexColor("#EDF5EE")
-            C_TEXT2   = colors.HexColor("#8FB898")
-            C_TEXT3   = colors.HexColor("#4A6B52")
-            C_AMBER   = colors.HexColor("#F59E0B")
-            C_RED     = colors.HexColor("#E53935")
+            # ── Cores — PDF tema claro profissional ──────────────────────────
+            C_GREEN   = colors.HexColor("#00A335")   # verde Intelbras
+            C_GDARK   = colors.HexColor("#005C2B")   # verde escuro (cabeçalhos)
+            C_GLIGHT  = colors.HexColor("#E8F5ED")   # verde claro (linhas pares)
+            C_BG      = colors.white                  # fundo branco
+            C_CARD    = colors.HexColor("#F4FAF6")   # fundo de seção
+            C_TEXT1   = colors.HexColor("#1A2E1A")   # texto principal escuro
+            C_TEXT2   = colors.HexColor("#2E5C3A")   # texto secundário verde-escuro
+            C_TEXT3   = colors.HexColor("#5A7A62")   # labels
+            C_AMBER   = colors.HexColor("#B45309")   # âmbar escuro (legível)
+            C_RED     = colors.HexColor("#B91C1C")   # vermelho escuro
             C_WHITE   = colors.white
-            C_BORDER  = colors.HexColor("#2A4030")
-            C_ROW1    = colors.HexColor("#1E2B1A")
-            C_ROW2    = colors.HexColor("#172014")
+            C_BORDER  = colors.HexColor("#B2D8BE")   # borda verde claro
+            C_ROW1    = colors.HexColor("#EAF5EE")   # linha par
+            C_ROW2    = colors.white                  # linha ímpar
 
             doc = SimpleDocTemplate(
                 filepath, pagesize=A4,
@@ -780,7 +684,7 @@ class App(ctk.CTk):
 
             s_title   = sty("t",20,C_GREEN,True,TA_LEFT,0,2)
             s_sub     = sty("s",10,C_TEXT2,False,TA_LEFT,0,10)
-            s_section = sty("sec",12,C_GREEN,True,TA_LEFT,14,6)
+            s_section = sty("sec",12,C_GDARK,True,TA_LEFT,14,6)
             s_body    = sty("b",9,C_TEXT2,False,TA_LEFT,0,3)
             s_value   = sty("v",9,C_TEXT1,True,TA_RIGHT,0,3)
             s_verdict = sty("vd",11,C_GREEN if livre>=0 else C_RED,True,TA_CENTER,0,4)
@@ -795,20 +699,19 @@ class App(ctk.CTk):
             ]]
             hdr_tbl = Table(hdr_data, colWidths=[W*0.6, W*0.4])
             hdr_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_BG),
-                ("ROWBACKGROUNDS",(0,0),(-1,-1),[C_BG]),
+                ("BACKGROUND",(0,0),(-1,-1),C_GLIGHT),
                 ("TOPPADDING",(0,0),(-1,-1),14),
                 ("BOTTOMPADDING",(0,0),(-1,-1),14),
                 ("LEFTPADDING",(0,0),(0,-1),16),
                 ("RIGHTPADDING",(-1,0),(-1,-1),16),
-                ("LINEBELOW",(0,0),(-1,-1),2,C_GREEN),
+                ("LINEBELOW",(0,0),(-1,-1),3,C_GREEN),
             ]))
             story.append(hdr_tbl)
             story.append(Spacer(1,14))
 
             # ── Veredicto ───────────────────────────────────────────────────
             vcol = C_GREEN if livre>=0 else C_RED
-            vbg  = colors.HexColor("#0D2B15") if livre>=0 else colors.HexColor("#2B0D0D")
+            vbg  = colors.HexColor("#E8F5ED") if livre>=0 else colors.HexColor("#FEE2E2")
             vtext = f"✔  Storage suficiente — {fmt(livre)} de margem disponível" if livre>=0 else f"⚠  Storage insuficiente — déficit de {fmt(abs(livre))}"
             vd = Table([[Paragraph(f"<b><font color='{'#00A335' if livre>=0 else '#E53935'}' size=12>{vtext}</font></b>", styles["Normal"])]],
                        colWidths=[W])
@@ -852,7 +755,7 @@ class App(ctk.CTk):
             bar_data = [[Paragraph(f"<font color='#8FB898' size=8>{bar_label}</font>", styles["Normal"])]]
             bar_tbl = Table(bar_data, colWidths=[W])
             bar_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_CARD),
+                ("BACKGROUND",(0,0),(-1,-1),C_GLIGHT),
                 ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),2),
                 ("LEFTPADDING",(0,0),(-1,-1),10),
             ]))
@@ -863,9 +766,9 @@ class App(ctk.CTk):
             fill_w = (pct_bar/100) * bar_w
             bar_bg   = Table([[""]],colWidths=[W])
             bar_bg.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_ROW1),
+                ("BACKGROUND",(0,0),(-1,-1),C_BORDER),
                 ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
-                ("LINEBELOW",(0,0),(-1,-1),8,colors.HexColor(bar_col)),
+                ("LINEBELOW",(0,0),(-1,-1),10,colors.HexColor(bar_col)),
                 ("LEFTPADDING",(0,0),(-1,-1),10),
             ]))
             story.append(bar_bg)
@@ -876,10 +779,10 @@ class App(ctk.CTk):
             raid_rows = [
                 ["Parâmetro","Valor","Parâmetro","Valor"],
                 ["Tipo de RAID", raid, "HDs ativos no array", str(dr)],
-                ["Capacidade por HD", f"{tam} TB", "Hot Spare(s)", f"{hs} HD(s) = {hs*tam:.1f} TB"],
-                ["Capacidade bruta", fmt(n*tam), "Volume disponível", fmt(util_tb)],
-                ["Eficiência", f"{efic}%", "Overhead RAID", fmt(bruto-util_tb)],
-                ["Nível de proteção", desc, "", ""],
+                ["Capacidade por HD (fab.)", f"{tam_fab:.1f} TB", "Hot Spare(s)", f"{hs} HD(s) = {hs*tam_fab*FATOR_UTIL:.2f} TB úteis"],
+                ["Capacidade por HD (útil)", f"{tam:.2f} TB  (×0,90)", "Volume disponível", fmt(util_tb)],
+                ["Capacidade bruta (útil)", fmt(n*tam), "Overhead RAID", fmt(bruto-util_tb)],
+                ["Eficiência RAID", f"{efic}%", "Nível de proteção", desc],
             ]
             r_tbl = Table(raid_rows, colWidths=[W*0.28, W*0.22, W*0.28, W*0.22])
             rs = [
@@ -951,14 +854,7 @@ class App(ctk.CTk):
             ]))
             story.append(ft_tbl)
 
-            # ── Fundo escuro nas páginas ─────────────────────────────────
-            def on_page(canvas, doc):
-                canvas.saveState()
-                canvas.setFillColor(C_BG)
-                canvas.rect(0,0,A4[0],A4[1],fill=1,stroke=0)
-                canvas.restoreState()
-
-            doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+            doc.build(story)
 
             self.lbl_pdf_status.configure(text=f"✔  Salvo com sucesso!", text_color=GREEN_PRIMARY)
             self.btn_pdf.configure(text="  Exportar Relatório PDF", state="normal")
