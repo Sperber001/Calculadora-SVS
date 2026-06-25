@@ -38,6 +38,7 @@ WHITE         = "#FFFFFF"
 AMBER         = "#F59E0B"
 RED           = "#E53935"
 FONT          = "Segoe UI"
+DECIMAL_TO_BINARY = 1000**4 / 1024**4  # ~0.9095 — fator de conversão fabricante → SO
 
 # ── TEMAS ──────────────────────────────────────────────────────────────────
 THEMES = {
@@ -352,9 +353,29 @@ class App(ctk.CTk):
         ctk.CTkLabel(cust,text="Personalizado:",font=(FONT,10),text_color=TEXT3).pack(side="left")
         self._entry(cust,self.v_nhd,width=70).pack(side="left",padx=8)
 
-        ff2=self._fl(frm,"CAPACIDADE POR HD")
+        ff2=self._fl(frm,"CAPACIDADE POR HD (anunciada pelo fabricante)")
         self.v_thd=tk.StringVar(value="4 TB"); self.v_thd.trace_add("write",lambda *_:self._calc_raid())
         self._combo(ff2,self.v_thd,[f"{v} TB" for v in TB_SIZES],cmd=self._calc_raid,width=260).pack(fill="x")
+
+        # Toggle decimal → binário
+        conv_row=ctk.CTkFrame(ff2,fg_color="transparent"); conv_row.pack(fill="x",pady=6)
+        self.v_conv=tk.BooleanVar(value=True)
+        self.v_conv.trace_add("write",lambda *_:self._calc_raid())
+        self.chk_conv=ctk.CTkSwitch(conv_row,
+            text="Aplicar conversão real (decimal → binário)",
+            variable=self.v_conv, onvalue=True, offvalue=False,
+            font=(FONT,10), text_color=TEXT2,
+            fg_color=BORDER, progress_color=GREEN_PRIMARY,
+            button_color=TEXT1, button_hover_color=GREEN_PRIMARY)
+        self.chk_conv.pack(anchor="w")
+        self.lbl_cap_real=ctk.CTkLabel(ff2,
+            text="Capacidade real no sistema: 3.64 TB",
+            font=(FONT,9,"bold"), text_color=GREEN_PRIMARY)
+        self.lbl_cap_real.pack(anchor="w",pady=2)
+        self.lbl_cap_loss=ctk.CTkLabel(ff2,
+            text="Perda de ~9.05% por diferença decimal/binário",
+            font=(FONT,9), text_color=TEXT3)
+        self.lbl_cap_loss.pack(anchor="w")
 
         ff3=self._fl(frm,"TIPO DE RAID")
         self.v_raid=tk.StringVar(value="RAID 5"); self._rbw={}
@@ -441,9 +462,41 @@ class App(ctk.CTk):
         elif cur==1: self.lbl_hs.configure(text="1 HD reservado em standby para substituição automática.",text_color=GREEN_PRIMARY)
         else: self.lbl_hs.configure(text=f"{cur} HDs reservados em standby para substituição automática.",text_color=GREEN_PRIMARY)
 
+    def _get_tam(self):
+        """Retorna capacidade por HD em TB, com ou sem conversão decimal→binário."""
+        try:
+            tam_fab = float(self.v_thd.get().replace(" TB",""))
+        except:
+            tam_fab = 4.0
+        conv = getattr(self, "v_conv", None)
+        if conv and conv.get():
+            tam_real = tam_fab * DECIMAL_TO_BINARY
+        else:
+            tam_real = tam_fab
+        # Atualizar labels informativos
+        try:
+            pct_perda = (1 - DECIMAL_TO_BINARY) * 100
+            if conv and conv.get():
+                self.lbl_cap_real.configure(
+                    text=f"Capacidade real no sistema: {tam_real:.4f} TB ({tam_real*1024:.1f} GB)",
+                    text_color=GREEN_PRIMARY)
+                self.lbl_cap_loss.configure(
+                    text=f"Perda de {pct_perda:.2f}% por diferença decimal/binário (padrão IEC)",
+                    text_color=TEXT3)
+            else:
+                self.lbl_cap_real.configure(
+                    text=f"Usando valor do fabricante: {tam_fab:.1f} TB (sem conversão)",
+                    text_color=AMBER)
+                self.lbl_cap_loss.configure(
+                    text="Atenção: valor real no sistema será menor que o anunciado",
+                    text_color=TEXT3)
+        except: pass
+        return tam_real
+
     def _calc_raid(self, *_):
-        try: n=int(self.v_nhd.get()); tam=float(self.v_thd.get().replace(" TB","")); hs=int(self.v_hs.get())
+        try: n=int(self.v_nhd.get()); hs=int(self.v_hs.get())
         except: return
+        tam = self._get_tam()
         self._upd_nhd(); self._upd_hs()
         raid=self.v_raid.get()
         if raid not in RAID_DATA: return
@@ -462,7 +515,10 @@ class App(ctk.CTk):
         efic=round((util/bruto)*100) if bruto>0 else 0
         col=GREEN_PRIMARY if efic>=75 else AMBER if efic>=50 else RED
         self.mc_rd.set(str(dr),"discos ativos no array")
-        self.mc_rb.set(fmt(n*tam),f"{n*tam:.1f} TB ({n} HDs)")
+        conv_on = getattr(self,"v_conv",None) and self.v_conv.get()
+        tam_fab = float(self.v_thd.get().replace(" TB",""))
+        rb_sub  = f"{n*tam:.2f} TB reais ({n} × {tam:.4f} TB)" if conv_on else f"{n*tam_fab:.1f} TB anunciado pelo fabricante"
+        self.mc_rb.set(fmt(n*tam), rb_sub)
         self.mc_ru.set(fmt(util),f"{util:.2f} TB disponíveis",GREEN_PRIMARY)
         self.mc_re.set(f"{efic}%","do espaço aproveitado",col)
         self.pb_raid.set(efic/100); self.pb_raid.configure(progress_color=col)
@@ -610,8 +666,9 @@ class App(ctk.CTk):
         self.lbl_pdf_status.pack(side="left",padx=14)
 
     def _upd_combined(self):
-        try: n=int(self.v_nhd.get()); tam=float(self.v_thd.get().replace(" TB","")); hs=int(self.v_hs.get())
+        try: n=int(self.v_nhd.get()); hs=int(self.v_hs.get())
         except: return
+        tam = self._get_tam()
         raid=self.v_raid.get()
         if raid not in RAID_DATA: return
         _,_,min_d,calc=RAID_DATA[raid]
@@ -651,7 +708,7 @@ class App(ctk.CTk):
         # Coletar dados atuais
         try:
             n     = int(self.v_nhd.get())
-            tam   = float(self.v_thd.get().replace(" TB",""))
+            tam   = self._get_tam()
             hs    = int(self.v_hs.get())
             raid  = self.v_raid.get()
             ncam  = int(self.v_ncam.get())
