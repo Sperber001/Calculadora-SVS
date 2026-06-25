@@ -52,7 +52,7 @@ RAID_DATA = {
     "RAID 10": ("Mirror + Stripe combinados",    "Alta performance e redundância. Mín. 4 HDs (par).",             4, lambda d,t: (d//2)*t),
     "JBOD":    ("Discos independentes sem RAID", "Sem redundância. Capacidade total de todos os HDs.",          1, lambda d,t: d*t),
 }
-TB_SIZES = [0.5,1,2,3,4,6,8,10,12,14,16,18,20]
+TB_SIZES = [0.5,1,2,3,4,6,8,10,12,14,16,18,20,22,24]
 RES_MAP  = {"D1/CIF-0.5MP":0.5,"720p HD-1MP":1,"1080p FullHD-2MP":2,"4MP":4,"3K/5MP":5,"4K UHD-8MP":8,"12MP":12}
 COMP_MAP = {"H.265/H.265+":0.5,"H.264":1.0,"MJPEG":1.5}
 BR_BASE  = {0.5:512,1:1024,2:2048,4:4096,5:5120,8:8192,12:12288}
