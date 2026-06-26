@@ -616,37 +616,36 @@ class App(ctk.CTk):
             messagebox.showerror("Erro", "Biblioteca ReportLab nao encontrada.\nInstale com: pip install reportlab")
             return
 
-        # Coletar dados atuais
         try:
-            n     = int(self.v_nhd.get())
-            tam   = self._get_tam()
+            n       = int(self.v_nhd.get())
+            tam     = self._get_tam()
             tam_fab = float(self.v_thd.get().replace(" TB",""))
-            hs    = int(self.v_hs.get())
-            raid  = self.v_raid.get()
-            ncam  = int(self.v_ncam.get())
-            res   = self.v_res.get()
-            comp  = self.v_comp.get()
-            fps   = self.v_fps.get()
-            dias  = int(self.v_dias.get())
-            horas = int(self.v_horas.get())
-            br    = float(self.v_bitrate.get())
+            tam_tib = (tam_fab * BYTES_PER_TB) / BYTES_PER_TIB
+            hs      = int(self.v_hs.get())
+            raid    = self.v_raid.get()
+            ncam    = int(self.v_ncam.get())
+            res     = self.v_res.get()
+            comp    = self.v_comp.get()
+            fps     = self.v_fps.get()
+            dias    = int(self.v_dias.get())
+            horas   = int(self.v_horas.get())
+            br      = float(self.v_bitrate.get())
         except:
             messagebox.showerror("Erro", "Preencha todos os campos antes de exportar.")
             return
 
-        sub,desc,min_d,calc = RAID_DATA.get(raid, ("","",1,lambda d,t:d*t))
-        dr       = max(n-hs,1) if hs>0 else n
-        bruto    = dr*tam
-        util_tb  = calc(dr,tam) if dr>=min_d else 0
-        efic     = round((util_tb/bruto)*100) if bruto>0 else 0
-        gb_cam   = (br*3600*horas)/(8*1024*1024)
-        cam_tb   = (gb_cam*ncam*dias)/1024
-        mbps     = (br*ncam)/1000
-        d1tb     = (1024/(gb_cam*ncam)) if gb_cam*ncam>0 else 0
-        livre    = util_tb - cam_tb
-        pct      = min((cam_tb/util_tb)*100,100) if util_tb>0 else 0
+        sub, desc, min_d, calc = RAID_DATA.get(raid, ("","",1,lambda d,t:d*t))
+        dr      = max(n-hs,1) if hs>0 else n
+        bruto   = dr * tam
+        util_tb = calc(dr,tam) if dr>=min_d else 0
+        efic    = round((util_tb/bruto)*100) if bruto>0 else 0
+        gb_cam  = (br*3600*horas)/(8*1024*1024)
+        cam_tb  = (gb_cam*ncam*dias)/1024
+        mbps    = (br*ncam)/1000
+        d1tb    = (1024/(gb_cam*ncam)) if gb_cam*ncam>0 else 0
+        livre   = util_tb - cam_tb
+        pct     = min((cam_tb/util_tb)*100,100) if util_tb>0 else 0
 
-        # Escolher local para salvar
         filepath = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF","*.pdf")],
@@ -660,216 +659,229 @@ class App(ctk.CTk):
         self.update()
 
         try:
-            # ── Cores — PDF tema meia-luz (entre escuro e branco) ────────────
-            C_GREEN   = colors.HexColor("#00A335")   # verde Intelbras — destaques
-            C_GDARK   = colors.HexColor("#00863F")   # verde médio — cabeçalhos
-            C_GLIGHT  = colors.HexColor("#1A2A1E")   # verde muito escuro — linhas pares
-            C_BG      = colors.HexColor("#141414")   # fundo geral — cinza quase preto
-            C_CARD    = colors.HexColor("#1E1E1E")   # seções — cinza escuro
-            C_TEXT1   = colors.HexColor("#F0F0F0")   # texto principal — quase branco
-            C_TEXT2   = colors.HexColor("#B0B0B0")   # texto secundário — cinza claro
-            C_TEXT3   = colors.HexColor("#707070")   # labels — cinza médio
-            C_AMBER   = colors.HexColor("#F59E0B")   # âmbar vivo
-            C_RED     = colors.HexColor("#EF4444")   # vermelho vivo
-            C_WHITE   = colors.HexColor("#F0F0F0")
-            C_BORDER  = colors.HexColor("#2E2E2E")   # borda neutra
-            C_ROW1    = colors.HexColor("#1A1A1A")   # linha par — ligeiramente mais escura
-            C_ROW2    = colors.HexColor("#1E1E1E")   # linha ímpar
+            # ── Paleta — fundo branco, verde Intelbras claro e escuro ────────
+            C_WHITE     = colors.white
+            C_GREEN     = colors.HexColor("#00A335")   # verde Intelbras primário
+            C_GREEN_D   = colors.HexColor("#005C2B")   # verde escuro — cabeçalhos
+            C_GREEN_M   = colors.HexColor("#00863F")   # verde médio — seções
+            C_GREEN_L   = colors.HexColor("#E8F5ED")   # verde muito claro — linhas pares
+            C_GREEN_XL  = colors.HexColor("#F4FAF6")   # verde quase branco — linhas ímpares
+            C_TEXT_D    = colors.HexColor("#1A2E1A")   # texto escuro principal
+            C_TEXT_M    = colors.HexColor("#2E5C3A")   # texto verde-escuro secundário
+            C_TEXT_L    = colors.HexColor("#5A7A62")   # labels verdes claros
+            C_BORDER    = colors.HexColor("#B2D8BE")   # borda verde suave
+            C_BORDER_D  = colors.HexColor("#4A9E68")   # borda verde média
+            C_AMBER     = colors.HexColor("#B45309")   # âmbar escuro legível
+            C_RED       = colors.HexColor("#B91C1C")   # vermelho escuro legível
+            C_RED_BG    = colors.HexColor("#FEE2E2")   # fundo vermelho claro
+            C_GREEN_BG  = colors.HexColor("#DCFCE7")   # fundo verde claro (veredicto ok)
 
             doc = SimpleDocTemplate(
                 filepath, pagesize=A4,
                 leftMargin=1.8*cm, rightMargin=1.8*cm,
                 topMargin=1.5*cm, bottomMargin=2*cm
             )
-
             W = A4[0] - 3.6*cm
 
-            styles = getSampleStyleSheet()
-            def sty(name,size,color=C_TEXT1,bold=False,align=TA_LEFT,space_before=0,space_after=4):
-                return ParagraphStyle(name,fontName="Helvetica-Bold" if bold else "Helvetica",
-                                      fontSize=size,textColor=color,alignment=align,
-                                      spaceAfter=space_after,spaceBefore=space_before,leading=size+4)
+            def sty(name, size, color=None, bold=False, align=TA_LEFT, sb=0, sa=4):
+                color = color or C_TEXT_D
+                return ParagraphStyle(name,
+                    fontName="Helvetica-Bold" if bold else "Helvetica",
+                    fontSize=size, textColor=color,
+                    alignment=align, spaceAfter=sa, spaceBefore=sb,
+                    leading=size+5)
 
-            s_title   = sty("t",20,C_GREEN,True,TA_LEFT,0,2)
-            s_sub     = sty("s",10,C_TEXT2,False,TA_LEFT,0,10)
-            s_section = sty("sec",12,C_GDARK,True,TA_LEFT,14,6)
-            s_body    = sty("b",9,C_TEXT2,False,TA_LEFT,0,3)
-            s_value   = sty("v",9,C_TEXT1,True,TA_RIGHT,0,3)
-            s_verdict = sty("vd",11,C_GREEN if livre>=0 else C_RED,True,TA_CENTER,0,4)
-            s_center  = sty("c",9,C_TEXT2,False,TA_CENTER,0,3)
+            s_section  = sty("sec", 11, C_GREEN_M, True, TA_LEFT, 12, 5)
+            s_note     = sty("note", 7,  C_TEXT_L, False, TA_LEFT, 0, 0)
+
+            def make_table(rows, col_w, header=True):
+                """Cria tabela estilizada com tema branco/verde Intelbras."""
+                tbl = Table(rows, colWidths=col_w, repeatRows=1 if header else 0)
+                ts = [
+                    ("FONTSIZE",(0,0),(-1,-1),9),
+                    ("TOPPADDING",(0,0),(-1,-1),7),
+                    ("BOTTOMPADDING",(0,0),(-1,-1),7),
+                    ("LEFTPADDING",(0,0),(-1,-1),10),
+                    ("RIGHTPADDING",(0,0),(-1,-1),10),
+                    ("GRID",(0,0),(-1,-1),0.4,C_BORDER),
+                    ("ALIGN",(1,0),(1,-1),"RIGHT"),
+                    ("ALIGN",(3,0),(3,-1),"RIGHT"),
+                    ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                    ("WORDWRAP",(0,0),(-1,-1),"CJK"),
+                ]
+                if header:
+                    ts += [
+                        ("BACKGROUND",(0,0),(-1,0),C_GREEN_D),
+                        ("TEXTCOLOR",(0,0),(-1,0),C_WHITE),
+                        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+                        ("LINEBELOW",(0,0),(-1,0),1.5,C_GREEN),
+                    ]
+                start = 1 if header else 0
+                for i in range(start, len(rows)):
+                    bg = C_GREEN_L if i%2==0 else C_GREEN_XL
+                    ts.append(("BACKGROUND",(0,i),(-1,i),bg))
+                    # Labels (colunas 0 e 2) em verde escuro
+                    ts.append(("TEXTCOLOR",(0,i),(0,i),C_TEXT_M))
+                    ts.append(("FONTNAME",(0,i),(0,i),"Helvetica"))
+                    if len(rows[0]) > 2:
+                        ts.append(("TEXTCOLOR",(2,i),(2,i),C_TEXT_M))
+                        ts.append(("FONTNAME",(2,i),(2,i),"Helvetica"))
+                    # Valores (colunas 1 e 3) em verde primário bold
+                    ts.append(("TEXTCOLOR",(1,i),(1,i),C_GREEN_M))
+                    ts.append(("FONTNAME",(1,i),(1,i),"Helvetica-Bold"))
+                    if len(rows[0]) > 2:
+                        ts.append(("TEXTCOLOR",(3,i),(3,i),C_GREEN_M))
+                        ts.append(("FONTNAME",(3,i),(3,i),"Helvetica-Bold"))
+                tbl.setStyle(TableStyle(ts))
+                return tbl
 
             story = []
 
-            # ── Cabeçalho ───────────────────────────────────────────────────
-            hdr_data = [[
-                Paragraph("<b><font color='#00A335' size=18>INTELBRAS</font></b><br/><font color='#8FB898' size=9>Storage &amp; CFTV Calculator</font>", styles["Normal"]),
-                Paragraph(f"<font color='#8FB898' size=8>Relatório gerado em<br/>{datetime.now().strftime('%d/%m/%Y às %H:%M')}</font>", ParagraphStyle("r",alignment=TA_RIGHT,fontSize=8,textColor=C_TEXT2,leading=12)),
-            ]]
-            hdr_tbl = Table(hdr_data, colWidths=[W*0.6, W*0.4])
-            hdr_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_CARD),
-                ("TOPPADDING",(0,0),(-1,-1),14),
-                ("BOTTOMPADDING",(0,0),(-1,-1),14),
-                ("LEFTPADDING",(0,0),(0,-1),16),
-                ("RIGHTPADDING",(-1,0),(-1,-1),16),
-                ("LINEBELOW",(0,0),(-1,-1),3,C_GREEN),
-            ]))
-            story.append(hdr_tbl)
-            story.append(Spacer(1,14))
+            # ── Cabeçalho ─────────────────────────────────────────────────
+            def on_page(canvas, doc):
+                """Fundo branco + faixa verde no topo."""
+                canvas.saveState()
+                # Fundo branco
+                canvas.setFillColor(C_WHITE)
+                canvas.rect(0,0,A4[0],A4[1],fill=1,stroke=0)
+                # Faixa verde escura no topo
+                canvas.setFillColor(C_GREEN_D)
+                canvas.rect(0, A4[1]-2*cm, A4[0], 2*cm, fill=1, stroke=0)
+                # Logo texto
+                canvas.setFillColor(C_WHITE)
+                canvas.setFont("Helvetica-Bold", 16)
+                canvas.drawString(1.8*cm, A4[1]-1.3*cm, "INTELBRAS")
+                canvas.setFont("Helvetica", 9)
+                canvas.setFillColor(C_GREEN_L)
+                canvas.drawString(1.8*cm, A4[1]-1.7*cm, "Storage & CFTV Calculator  |  v3.0 PRO")
+                # Data à direita
+                canvas.setFillColor(C_GREEN_L)
+                canvas.setFont("Helvetica", 8)
+                data_str = f"Relatório gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
+                canvas.drawRightString(A4[0]-1.8*cm, A4[1]-1.3*cm, data_str)
+                # Linha verde no rodapé
+                canvas.setStrokeColor(C_GREEN)
+                canvas.setLineWidth(1.5)
+                canvas.line(1.8*cm, 1.5*cm, A4[0]-1.8*cm, 1.5*cm)
+                # Texto rodapé
+                canvas.setFillColor(C_TEXT_L)
+                canvas.setFont("Helvetica", 7)
+                canvas.drawString(1.8*cm, 1.1*cm,
+                    "Intelbras Storage Calculator  |  Valores estimados para dimensionamento técnico")
+                canvas.drawRightString(A4[0]-1.8*cm, 1.1*cm,
+                    f"© 2025 Intelbras  |  {datetime.now().strftime('%d/%m/%Y')}")
+                canvas.restoreState()
 
-            # ── Veredicto ───────────────────────────────────────────────────
-            vcol = C_GREEN if livre>=0 else C_RED
-            vbg  = colors.HexColor("#0D2B15") if livre>=0 else colors.HexColor("#2B0D0D")
-            vtext = f"✔  Storage suficiente — {fmt(livre)} de margem disponível" if livre>=0 else f"⚠  Storage insuficiente — déficit de {fmt(abs(livre))}"
-            vd = Table([[Paragraph(f"<b><font color='{'#00A335' if livre>=0 else '#E53935'}' size=12>{vtext}</font></b>", styles["Normal"])]],
+            story.append(Spacer(1, 0.5*cm))  # espaço após faixa do topo
+
+            # ── Veredicto ─────────────────────────────────────────────────
+            v_bg  = C_GREEN_BG if livre>=0 else C_RED_BG
+            v_col = C_GREEN_M  if livre>=0 else C_RED
+            v_brd = C_GREEN    if livre>=0 else C_RED
+            v_ico = "✔" if livre>=0 else "⚠"
+            v_txt = f"{v_ico}  Storage suficiente — {fmt(livre)} de margem disponível" if livre>=0                     else f"{v_ico}  Storage insuficiente — déficit de {fmt(abs(livre))}"
+            vd = Table([[Paragraph(f"<b><font size=11>{v_txt}</font></b>",
+                                   ParagraphStyle("vd",fontName="Helvetica-Bold",fontSize=11,
+                                                  textColor=v_col,leading=15))]],
                        colWidths=[W])
             vd.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),vbg),
+                ("BACKGROUND",(0,0),(-1,-1),v_bg),
                 ("TOPPADDING",(0,0),(-1,-1),12),("BOTTOMPADDING",(0,0),(-1,-1),12),
-                ("LEFTPADDING",(0,0),(-1,-1),16),
-                ("LINEAFTER",(0,0),(0,-1),4,vcol),
-                ("LINEBEFORE",(0,0),(0,-1),4,vcol),
+                ("LEFTPADDING",(0,0),(-1,-1),16),("RIGHTPADDING",(0,0),(-1,-1),16),
+                ("LINEBEFORE",(0,0),(0,-1),4,v_brd),
+                ("LINEAFTER",(0,0),(0,-1),0.5,C_BORDER),
+                ("LINEABOVE",(0,0),(-1,0),0.5,C_BORDER),
+                ("LINEBELOW",(0,0),(-1,-1),0.5,C_BORDER),
             ]))
             story.append(vd)
             story.append(Spacer(1,14))
 
-            # ── Análise Combinada ────────────────────────────────────────────
+            # ── Análise Combinada ──────────────────────────────────────────
             story.append(Paragraph("Análise Combinada", s_section))
-            pct_bar = int(min(pct,100))
-            bar_col = "#00A335" if pct<70 else "#F59E0B" if pct<90 else "#E53935"
-            comb_data = [
+
+            comb_rows = [
+                ["Parâmetro","Valor","Parâmetro","Valor"],
                 ["Disponível no RAID", fmt(util_tb), "Necessário pelas Câmeras", fmt(cam_tb)],
-                ["Saldo de Espaço", f"+{fmt(livre)}" if livre>=0 else f"−{fmt(abs(livre))}", "Taxa de Utilização", f"{pct:.1f}%"],
+                ["Saldo de Espaço",
+                 f"+{fmt(livre)}" if livre>=0 else f"−{fmt(abs(livre))}",
+                 "Taxa de Utilização", f"{pct:.1f}%"],
             ]
-            comb_tbl = Table(comb_data, colWidths=[W*0.28, W*0.22, W*0.28, W*0.22])
-            comb_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(0,-1),C_CARD),("BACKGROUND",(2,0),(2,-1),C_CARD),
-                ("BACKGROUND",(1,0),(1,-1),C_ROW1),("BACKGROUND",(3,0),(3,-1),C_ROW1),
-                ("FONTNAME",(0,0),(0,-1),"Helvetica"),("FONTNAME",(2,0),(2,-1),"Helvetica"),
-                ("FONTNAME",(1,0),(1,-1),"Helvetica-Bold"),("FONTNAME",(3,0),(3,-1),"Helvetica-Bold"),
-                ("FONTSIZE",(0,0),(-1,-1),9),
-                ("TEXTCOLOR",(0,0),(0,-1),C_TEXT3),("TEXTCOLOR",(2,0),(2,-1),C_TEXT3),
-                ("TEXTCOLOR",(1,0),(1,-1),C_GREEN),("TEXTCOLOR",(3,0),(3,-1),C_AMBER),
-                ("ALIGN",(1,0),(1,-1),"RIGHT"),("ALIGN",(3,0),(3,-1),"RIGHT"),
-                ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
-                ("LEFTPADDING",(0,0),(-1,-1),10),("RIGHTPADDING",(0,0),(-1,-1),10),
-                ("GRID",(0,0),(-1,-1),0.5,C_BORDER),
-            ]))
-            story.append(comb_tbl)
+            story.append(make_table(comb_rows, [W*0.30, W*0.20, W*0.30, W*0.20]))
             story.append(Spacer(1,6))
 
-            # Barra de utilização
-            bar_label = f"Utilização do Storage RAID: {pct:.1f}%"
-            bar_data = [[Paragraph(f"<font color='#8FB898' size=8>{bar_label}</font>", styles["Normal"])]]
-            bar_tbl = Table(bar_data, colWidths=[W])
-            bar_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_CARD),
-                ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),2),
-                ("LEFTPADDING",(0,0),(-1,-1),10),
+            # Barra de progresso visual
+            bar_col_hex = "#00A335" if pct<70 else "#B45309" if pct<90 else "#B91C1C"
+            bar_bg_tbl = Table([["",""]],
+                               colWidths=[W*(pct/100), W*(1-pct/100)])
+            bar_bg_tbl.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(0,0),colors.HexColor(bar_col_hex)),
+                ("BACKGROUND",(1,0),(1,0),C_GREEN_L),
+                ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-1),0,C_WHITE),
+                ("GRID",(0,0),(-1,-1),0,C_WHITE),
             ]))
-            story.append(bar_tbl)
-
-            # Barra visual
-            bar_w = W - 20
-            fill_w = (pct_bar/100) * bar_w
-            bar_bg   = Table([[""]],colWidths=[W])
-            bar_bg.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_BORDER),
-                ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
-                ("LINEBELOW",(0,0),(-1,-1),10,colors.HexColor(bar_col)),
-                ("LEFTPADDING",(0,0),(-1,-1),10),
+            pct_label = Table([[
+                Paragraph(f"<font color='#5A7A62' size=7>Utilização do Storage RAID: <b>{pct:.1f}%</b></font>",
+                          ParagraphStyle("pl",fontSize=7,textColor=C_TEXT_L,leading=10)),
+                Paragraph(f"<font color='#5A7A62' size=7><b>{fmt(util_tb)}</b> disponíveis  |  <b>{fmt(cam_tb)}</b> necessários</font>",
+                          ParagraphStyle("pr",fontSize=7,textColor=C_TEXT_L,alignment=TA_RIGHT,leading=10)),
+            ]], colWidths=[W*0.5,W*0.5])
+            pct_label.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(-1,-1),C_GREEN_XL),
+                ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6),
             ]))
-            story.append(bar_bg)
+            story.append(bar_bg_tbl)
+            story.append(pct_label)
             story.append(Spacer(1,14))
 
-            # ── Configuração RAID ─────────────────────────────────────────
+            # ── Configuração RAID ──────────────────────────────────────────
             story.append(Paragraph("Configuração do Array RAID", s_section))
+            conv_on = getattr(self,"v_conv",None) and self.v_conv.get()
+            cap_util_str = f"{tam:.4f} TiB úteis (IEC)" if conv_on else f"{tam_fab:.1f} TB (sem conversão)"
             raid_rows = [
                 ["Parâmetro","Valor","Parâmetro","Valor"],
-                ["Tipo de RAID", raid, "HDs ativos no array", str(dr)],
-                ["Capacidade por HD (fab.)", f"{tam_fab:.1f} TB", "Hot Spare(s)", f"{hs} HD(s) = {hs*tam_fab*FATOR_UTIL:.2f} TB úteis"],
-                ["Capacidade por HD (útil)", f"{tam:.2f} TB  (×0,90)", "Volume disponível", fmt(util_tb)],
-                ["Capacidade bruta (útil)", fmt(n*tam), "Overhead RAID", fmt(bruto-util_tb)],
-                ["Eficiência RAID", f"{efic}%", "Nível de proteção", desc],
+                ["Tipo de RAID",             raid,                  "HDs ativos no array",    str(dr)],
+                ["Capacidade por HD (fab.)", f"{tam_fab:.1f} TB",   "Hot Spare(s)",           f"{hs} HD(s)"],
+                ["Capacidade por HD (TiB)",  f"{tam_tib:.4f} TiB",  "Capacidade útil por HD", cap_util_str],
+                ["Capacidade bruta (útil)",  fmt(n*tam),            "Volume disponível",      fmt(util_tb)],
+                ["Overhead RAID",            fmt(bruto-util_tb),    "Eficiência RAID",        f"{efic}%"],
             ]
-            r_tbl = Table(raid_rows, colWidths=[W*0.28, W*0.22, W*0.28, W*0.22])
-            rs = [
-                ("BACKGROUND",(0,0),(-1,0),C_GDARK),
-                ("TEXTCOLOR",(0,0),(-1,0),C_WHITE),
-                ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-                ("FONTSIZE",(0,0),(-1,-1),9),
-                ("ALIGN",(1,0),(1,-1),"RIGHT"),("ALIGN",(3,0),(3,-1),"RIGHT"),
-                ("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7),
-                ("LEFTPADDING",(0,0),(-1,-1),10),("RIGHTPADDING",(0,0),(-1,-1),10),
-                ("GRID",(0,0),(-1,-1),0.5,C_BORDER),
-                ("FONTNAME",(1,1),(1,-1),"Helvetica-Bold"),("TEXTCOLOR",(1,1),(1,-1),C_GREEN),
-                ("FONTNAME",(3,1),(3,-1),"Helvetica-Bold"),("TEXTCOLOR",(3,1),(3,-1),C_GREEN),
-            ]
-            for i in range(1,len(raid_rows)):
-                bg = C_ROW1 if i%2==0 else C_ROW2
-                rs.append(("BACKGROUND",(0,i),(-1,i),bg))
-                rs.append(("TEXTCOLOR",(0,i),(0,i),C_TEXT3))
-                rs.append(("TEXTCOLOR",(2,i),(2,i),C_TEXT3))
-            r_tbl.setStyle(TableStyle(rs))
-            story.append(r_tbl)
+            # Última linha — nível de proteção em largura total
+            story.append(make_table(raid_rows, [W*0.28, W*0.22, W*0.28, W*0.22]))
+
+            # Linha extra: nível de proteção (texto longo em row separada)
+            prot_tbl = Table([[
+                Paragraph(f"<font color='#5A7A62' size=8><b>Nível de proteção:</b>  {desc}</font>",
+                          ParagraphStyle("prot",fontSize=8,textColor=C_TEXT_L,leading=12))
+            ]], colWidths=[W])
+            prot_tbl.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(-1,-1),C_GREEN_XL),
+                ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+                ("LEFTPADDING",(0,0),(-1,-1),10),
+                ("LINEBELOW",(0,0),(-1,-1),0.4,C_BORDER),
+                ("LINELEFT",(0,0),(0,-1),3,C_GREEN),
+            ]))
+            story.append(prot_tbl)
             story.append(Spacer(1,14))
 
-            # ── Configuração Câmeras ──────────────────────────────────────
+            # ── Configuração Câmeras ───────────────────────────────────────
             story.append(Paragraph("Configuração das Câmeras & Gravação", s_section))
             cam_rows = [
                 ["Parâmetro","Valor","Parâmetro","Valor"],
-                ["Número de câmeras", str(ncam), "Resolução", res],
-                ["Compressão", comp, "FPS", fps],
-                ["Bitrate por câmera", f"{br:.0f} Kbps", "Bitrate total", f"{mbps:.1f} Mbps"],
-                ["Dias de retenção", f"{dias} dias", "Horas/dia gravando", f"{horas}h"],
-                ["Por câmera / dia", fmt(gb_cam,"GB"), "Armazenamento total", fmt(cam_tb)],
-                ["Dias com 1 TB", f"{d1tb:.1f} dias", "", ""],
+                ["Número de câmeras",   str(ncam),            "Resolução",            res],
+                ["Compressão",          comp,                  "FPS",                  fps],
+                ["Bitrate por câmera",  f"{br:.0f} Kbps",     "Bitrate total",        f"{mbps:.1f} Mbps"],
+                ["Dias de retenção",    f"{dias} dias",        "Horas/dia gravando",   f"{horas}h"],
+                ["Por câmera / dia",    fmt(gb_cam,"GB"),      "Armazenamento total",  fmt(cam_tb)],
+                ["Dias com 1 TB",       f"{d1tb:.1f} dias",    "",                     ""],
             ]
-            c_tbl = Table(cam_rows, colWidths=[W*0.28, W*0.22, W*0.28, W*0.22])
-            cs = [
-                ("BACKGROUND",(0,0),(-1,0),C_GDARK),
-                ("TEXTCOLOR",(0,0),(-1,0),C_WHITE),
-                ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-                ("FONTSIZE",(0,0),(-1,-1),9),
-                ("ALIGN",(1,0),(1,-1),"RIGHT"),("ALIGN",(3,0),(3,-1),"RIGHT"),
-                ("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7),
-                ("LEFTPADDING",(0,0),(-1,-1),10),("RIGHTPADDING",(0,0),(-1,-1),10),
-                ("GRID",(0,0),(-1,-1),0.5,C_BORDER),
-                ("FONTNAME",(1,1),(1,-1),"Helvetica-Bold"),("TEXTCOLOR",(1,1),(1,-1),C_GREEN),
-                ("FONTNAME",(3,1),(3,-1),"Helvetica-Bold"),("TEXTCOLOR",(3,1),(3,-1),C_GREEN),
-            ]
-            for i in range(1,len(cam_rows)):
-                bg = C_ROW1 if i%2==0 else C_ROW2
-                cs.append(("BACKGROUND",(0,i),(-1,i),bg))
-                cs.append(("TEXTCOLOR",(0,i),(0,i),C_TEXT3))
-                cs.append(("TEXTCOLOR",(2,i),(2,i),C_TEXT3))
-            c_tbl.setStyle(TableStyle(cs))
-            story.append(c_tbl)
+            story.append(make_table(cam_rows, [W*0.28, W*0.22, W*0.28, W*0.22]))
             story.append(Spacer(1,20))
 
-            # ── Rodapé ───────────────────────────────────────────────────
-            ft_data = [[
-                Paragraph("<font color='#4A6B52' size=7>Intelbras Storage Calculator v3.0 PRO  |  Valores estimados para dimensionamento técnico</font>", styles["Normal"]),
-                Paragraph(f"<font color='#4A6B52' size=7>© 2025 Intelbras  |  {datetime.now().strftime('%d/%m/%Y')}</font>",
-                          ParagraphStyle("fr",alignment=TA_RIGHT,fontSize=7,textColor=C_TEXT3,leading=10)),
-            ]]
-            ft_tbl = Table(ft_data, colWidths=[W*0.7,W*0.3])
-            ft_tbl.setStyle(TableStyle([
-                ("LINEABOVE",(0,0),(-1,0),1,C_GDARK),
-                ("TOPPADDING",(0,0),(-1,-1),8),
-                ("LEFTPADDING",(0,0),(0,-1),0),
-                ("RIGHTPADDING",(-1,0),(-1,-1),0),
-            ]))
-            story.append(ft_tbl)
-
-            def on_page(canvas, doc):
-                canvas.saveState()
-                canvas.setFillColor(colors.HexColor("#141414"))
-                canvas.rect(0,0,A4[0],A4[1],fill=1,stroke=0)
-                canvas.restoreState()
             doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
 
-            self.lbl_pdf_status.configure(text=f"✔  Salvo com sucesso!", text_color=GREEN_PRIMARY)
+            self.lbl_pdf_status.configure(text="✔  Salvo com sucesso!", text_color=GREEN_PRIMARY)
             self.btn_pdf.configure(text="  Exportar Relatório PDF", state="normal")
 
         except Exception as e:
