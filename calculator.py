@@ -20,28 +20,36 @@ _ICON_B64 = """AAABAAYAEBAAAAEAIAB5AQAAZgAAACAgAAABACAAbgMAAN8BAAAwMAAAAQAgABUFA
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 
-# Cores oficiais Intelbras adaptadas para tema escuro
-GREEN_PRIMARY = "#00A335"
-GREEN_DARK    = "#00863F"
-GREEN_DARKER  = "#005C2B"
-GREEN_SUBTLE  = "#003D1D"
-BG_DARK       = "#0D1410"
-BG_PANEL      = "#111A14"
-BG_CARD       = "#172014"
-BG_FIELD      = "#1E2B1A"
-BG_HOVER      = "#243320"
-BORDER        = "#2A4030"
-TEXT1         = "#EDF5EE"
-TEXT2         = "#B8D4BC"
-TEXT3         = "#7AAB84"
+# Paleta Intelbras — fundo preto neutro, verde só em destaques
+GREEN_PRIMARY = "#00A335"   # verde Intelbras — botões ativos, indicadores
+GREEN_DARK    = "#00863F"   # hover de elementos verdes
+GREEN_DARKER  = "#005C2B"   # bordas verdes sutis
+GREEN_SUBTLE  = "#003D1D"   # fundo de badges verdes
+BG_DARK       = "#0A0A0A"   # fundo principal — quase preto
+BG_PANEL      = "#111111"   # sidebar e header
+BG_CARD       = "#1A1A1A"   # cards
+BG_FIELD      = "#222222"   # inputs e campos
+BG_HOVER      = "#2A2A2A"   # hover neutro
+BORDER        = "#2E2E2E"   # bordas neutras (não verdes)
+BORDER_GREEN  = "#1A3D25"   # bordas verdes apenas onde faz sentido
+TEXT1         = "#F0F0F0"   # texto principal — quase branco
+TEXT2         = "#A0A0A0"   # texto secundário — cinza médio
+TEXT3         = "#606060"   # labels — cinza escuro
 WHITE         = "#FFFFFF"
 AMBER         = "#F59E0B"
 RED           = "#E53935"
 FONT          = "Segoe UI"
-# Fatores de conversão baseados na referência técnica Seagate/IEC
-FATOR_TIB   = 1 / 1.099511628   # TB fabricante → TiB exibido no SO  (~0.9095)
-FATOR_UTIL  = 0.90               # Fator útil após formatação (NTFS/EXT4/XFS) ~1% overhead + conversão
-DECIMAL_TO_BINARY = FATOR_TIB   # alias para compatibilidade
+# Conversão exata IEC — mesma lógica dos gravadores (NVR/DVR)
+# 1 TB fabricante = 1.000.000.000.000 bytes
+# 1 TiB sistema   = 1.099.511.627.776 bytes (2^40)
+BYTES_PER_TB  = 1_000_000_000_000
+BYTES_PER_TIB = 1_099_511_627_776   # 2^40
+FATOR_TIB     = BYTES_PER_TB / BYTES_PER_TIB  # ~0.90949 (exato IEC)
+# Overhead de formatação NTFS/EXT4: ~0.5% a 1%
+FATOR_FORMAT  = 0.995              # 0.5% reservado pelo sistema de arquivos
+# Capacidade útil real = TB_fab × FATOR_TIB × FATOR_FORMAT
+FATOR_UTIL    = FATOR_TIB * FATOR_FORMAT   # ~0.90494 (exato, não redondo)
+DECIMAL_TO_BINARY = FATOR_TIB  # alias
 
 
 RAID_DATA = {
@@ -128,7 +136,7 @@ class App(ctk.CTk):
         badge.pack()
         ctk.CTkLabel(badge, text="v3.0 PRO", font=(FONT,9,"bold"), text_color=GREEN_PRIMARY).pack(padx=10, pady=5)
 
-        self._div_line = ctk.CTkFrame(self, fg_color=GREEN_DARKER, height=2, corner_radius=0)
+        self._div_line = ctk.CTkFrame(self, fg_color="#222222", height=1, corner_radius=0)
         self._div_line.pack(fill="x")
 
     def _layout(self):
@@ -363,35 +371,35 @@ class App(ctk.CTk):
         else: self.lbl_hs.configure(text=f"{cur} HDs reservados em standby para substituição automática.",text_color=GREEN_PRIMARY)
 
     def _get_tam(self):
-        """Retorna capacidade útil por HD aplicando conversão decimal→binário + overhead formatação."""
+        """Conversão exata IEC — mesma lógica usada em NVRs e DVRs Intelbras."""
         try:
             tam_fab = float(self.v_thd.get().replace(" TB",""))
         except:
             tam_fab = 4.0
         conv = getattr(self, "v_conv", None)
         if conv and conv.get():
-            # TiB exibido no SO: TB / 1.099511628 ≈ TB × 0.9095
-            tam_tib  = tam_fab * FATOR_TIB
-            # Útil real após formatação: TB × 0.90 (regra prática para NVR/DVR)
-            tam_util = tam_fab * FATOR_UTIL
+            # Exato: bytes do fabricante ÷ bytes por TiB
+            tam_tib  = (tam_fab * BYTES_PER_TB) / BYTES_PER_TIB
+            # Útil: descontar overhead do sistema de arquivos (~0.5%)
+            tam_util = tam_tib * FATOR_FORMAT
         else:
             tam_tib  = tam_fab
             tam_util = tam_fab
-        # Atualizar labels informativos
+        # Atualizar labels
         try:
             if conv and conv.get():
                 self.lbl_cap_real.configure(
-                    text=f"Exibido no SO: {tam_tib:.2f} TiB  |  Útil (após formatação): {tam_util:.2f} TB",
+                    text=f"Exibido no gravador: {tam_tib:.4f} TiB  |  Útil (pós-formatação): {tam_util:.4f} TiB",
                     text_color=GREEN_PRIMARY)
                 self.lbl_cap_loss.configure(
-                    text=f"Fórmula: {tam_fab} TB ÷ 1,0995 = {tam_tib:.2f} TiB  →  útil ≈ {tam_fab} × 0,90 = {tam_util:.2f} TB",
+                    text=f"{tam_fab} TB × {BYTES_PER_TB:,} bytes ÷ {BYTES_PER_TIB:,} = {tam_tib:.4f} TiB",
                     text_color=TEXT3)
             else:
                 self.lbl_cap_real.configure(
                     text=f"Usando valor do fabricante: {tam_fab:.1f} TB (sem conversão)",
                     text_color=AMBER)
                 self.lbl_cap_loss.configure(
-                    text="Atenção: valor real no sistema será menor que o anunciado",
+                    text="Atenção: o gravador exibirá um valor menor que o anunciado",
                     text_color=TEXT3)
         except: pass
         return tam_util
@@ -652,21 +660,21 @@ class App(ctk.CTk):
         self.update()
 
         try:
-            # ── Cores — PDF tema claro profissional ──────────────────────────
-            C_GREEN   = colors.HexColor("#00A335")   # verde Intelbras
-            C_GDARK   = colors.HexColor("#005C2B")   # verde escuro (cabeçalhos)
-            C_GLIGHT  = colors.HexColor("#E8F5ED")   # verde claro (linhas pares)
-            C_BG      = colors.white                  # fundo branco
-            C_CARD    = colors.HexColor("#F4FAF6")   # fundo de seção
-            C_TEXT1   = colors.HexColor("#1A2E1A")   # texto principal escuro
-            C_TEXT2   = colors.HexColor("#2E5C3A")   # texto secundário verde-escuro
-            C_TEXT3   = colors.HexColor("#5A7A62")   # labels
-            C_AMBER   = colors.HexColor("#B45309")   # âmbar escuro (legível)
-            C_RED     = colors.HexColor("#B91C1C")   # vermelho escuro
-            C_WHITE   = colors.white
-            C_BORDER  = colors.HexColor("#B2D8BE")   # borda verde claro
-            C_ROW1    = colors.HexColor("#EAF5EE")   # linha par
-            C_ROW2    = colors.white                  # linha ímpar
+            # ── Cores — PDF tema meia-luz (entre escuro e branco) ────────────
+            C_GREEN   = colors.HexColor("#00A335")   # verde Intelbras — destaques
+            C_GDARK   = colors.HexColor("#00863F")   # verde médio — cabeçalhos
+            C_GLIGHT  = colors.HexColor("#1A2A1E")   # verde muito escuro — linhas pares
+            C_BG      = colors.HexColor("#141414")   # fundo geral — cinza quase preto
+            C_CARD    = colors.HexColor("#1E1E1E")   # seções — cinza escuro
+            C_TEXT1   = colors.HexColor("#F0F0F0")   # texto principal — quase branco
+            C_TEXT2   = colors.HexColor("#B0B0B0")   # texto secundário — cinza claro
+            C_TEXT3   = colors.HexColor("#707070")   # labels — cinza médio
+            C_AMBER   = colors.HexColor("#F59E0B")   # âmbar vivo
+            C_RED     = colors.HexColor("#EF4444")   # vermelho vivo
+            C_WHITE   = colors.HexColor("#F0F0F0")
+            C_BORDER  = colors.HexColor("#2E2E2E")   # borda neutra
+            C_ROW1    = colors.HexColor("#1A1A1A")   # linha par — ligeiramente mais escura
+            C_ROW2    = colors.HexColor("#1E1E1E")   # linha ímpar
 
             doc = SimpleDocTemplate(
                 filepath, pagesize=A4,
@@ -699,7 +707,7 @@ class App(ctk.CTk):
             ]]
             hdr_tbl = Table(hdr_data, colWidths=[W*0.6, W*0.4])
             hdr_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_GLIGHT),
+                ("BACKGROUND",(0,0),(-1,-1),C_CARD),
                 ("TOPPADDING",(0,0),(-1,-1),14),
                 ("BOTTOMPADDING",(0,0),(-1,-1),14),
                 ("LEFTPADDING",(0,0),(0,-1),16),
@@ -711,7 +719,7 @@ class App(ctk.CTk):
 
             # ── Veredicto ───────────────────────────────────────────────────
             vcol = C_GREEN if livre>=0 else C_RED
-            vbg  = colors.HexColor("#E8F5ED") if livre>=0 else colors.HexColor("#FEE2E2")
+            vbg  = colors.HexColor("#0D2B15") if livre>=0 else colors.HexColor("#2B0D0D")
             vtext = f"✔  Storage suficiente — {fmt(livre)} de margem disponível" if livre>=0 else f"⚠  Storage insuficiente — déficit de {fmt(abs(livre))}"
             vd = Table([[Paragraph(f"<b><font color='{'#00A335' if livre>=0 else '#E53935'}' size=12>{vtext}</font></b>", styles["Normal"])]],
                        colWidths=[W])
@@ -755,7 +763,7 @@ class App(ctk.CTk):
             bar_data = [[Paragraph(f"<font color='#8FB898' size=8>{bar_label}</font>", styles["Normal"])]]
             bar_tbl = Table(bar_data, colWidths=[W])
             bar_tbl.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,-1),C_GLIGHT),
+                ("BACKGROUND",(0,0),(-1,-1),C_CARD),
                 ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),2),
                 ("LEFTPADDING",(0,0),(-1,-1),10),
             ]))
@@ -854,7 +862,12 @@ class App(ctk.CTk):
             ]))
             story.append(ft_tbl)
 
-            doc.build(story)
+            def on_page(canvas, doc):
+                canvas.saveState()
+                canvas.setFillColor(colors.HexColor("#141414"))
+                canvas.rect(0,0,A4[0],A4[1],fill=1,stroke=0)
+                canvas.restoreState()
+            doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
 
             self.lbl_pdf_status.configure(text=f"✔  Salvo com sucesso!", text_color=GREEN_PRIMARY)
             self.btn_pdf.configure(text="  Exportar Relatório PDF", state="normal")
@@ -868,7 +881,7 @@ class App(ctk.CTk):
         # Guardar referência do footer para o toggle conseguir reposicioná-lo
         self._footer_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self._footer_frame.pack(fill="x", side="bottom")
-        ctk.CTkFrame(self._footer_frame,fg_color=GREEN_DARKER,height=2,corner_radius=0).pack(fill="x")
+        ctk.CTkFrame(self._footer_frame,fg_color="#222222",height=1,corner_radius=0).pack(fill="x")
         ft=ctk.CTkFrame(self._footer_frame,fg_color=BG_PANEL,height=32,corner_radius=0)
         ft.pack(fill="x"); ft.pack_propagate(False)
         ctk.CTkLabel(ft,text="Intelbras Storage Calculator  |  Valores estimados para dimensionamento técnico",
