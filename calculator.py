@@ -75,11 +75,18 @@ def fmt(v, unit="TB"):
 
 class MetricCard(ctk.CTkFrame):
     def __init__(self, p, label, **kw):
-        super().__init__(p, fg_color=BG_FIELD, corner_radius=10, border_width=1, border_color=BORDER, **kw)
-        ctk.CTkLabel(self, text=label, font=(FONT,11), text_color=TEXT2).pack(anchor="w", padx=14, pady=12)
-        self.val = ctk.CTkLabel(self, text="--", font=(FONT,22,"bold"), text_color=TEXT1)
+        super().__init__(p, fg_color=BG_FIELD, corner_radius=10,
+                         border_width=1, border_color=BORDER,
+                         width=180, height=110, **kw)
+        self.pack_propagate(False)   # impede redimensionamento pelo conteúdo
+        self.grid_propagate(False)
+        ctk.CTkLabel(self, text=label, font=(FONT,10), text_color=TEXT2,
+                     anchor="w", wraplength=160).pack(anchor="w", padx=14, pady=12)
+        self.val = ctk.CTkLabel(self, text="--", font=(FONT,20,"bold"),
+                                text_color=TEXT1, anchor="w", wraplength=160)
         self.val.pack(anchor="w", padx=14)
-        self.sub = ctk.CTkLabel(self, text="", font=(FONT,10), text_color=TEXT3)
+        self.sub = ctk.CTkLabel(self, text="", font=(FONT,9),
+                                text_color=TEXT3, anchor="w", wraplength=160)
         self.sub.pack(anchor="w", padx=14, pady=12)
     def set(self, v, s="", c=TEXT1):
         self.val.configure(text=v, text_color=c)
@@ -87,9 +94,14 @@ class MetricCard(ctk.CTkFrame):
 
 class InfoBox(ctk.CTkFrame):
     def __init__(self, p, **kw):
-        super().__init__(p, fg_color=BG_FIELD, corner_radius=8, border_width=1, border_color=BORDER, **kw)
-        self.lbl = ctk.CTkLabel(self, text="", font=(FONT,10), text_color=TEXT2, wraplength=420, justify="left")
-        self.lbl.pack(anchor="w", padx=12, pady=10)
+        super().__init__(p, fg_color=BG_FIELD, corner_radius=8,
+                         border_width=1, border_color=BORDER,
+                         height=70, **kw)
+        self.pack_propagate(False)
+        self.lbl = ctk.CTkLabel(self, text="", font=(FONT,10),
+                                text_color=TEXT2, wraplength=440,
+                                justify="left", anchor="w")
+        self.lbl.pack(anchor="w", padx=12, pady=10, fill="x")
     def set(self, t, c=TEXT2): self.lbl.configure(text=t, text_color=c)
 
 class App(ctk.CTk):
@@ -226,10 +238,12 @@ class App(ctk.CTk):
             return c
         for v in values:
             lbl = "Nenhum" if v=="Nenhum" else str(v)
+            # width fixo por botão para não mudar ao selecionar
+            btn_w = max(56, len(lbl)*9 + 20)
             b = ctk.CTkButton(row, text=lbl, command=make(v),
                              fg_color=BG_FIELD, hover_color=BG_HOVER, text_color=TEXT2,
-                             corner_radius=6, height=30, font=(FONT,11),
-                             border_width=1, border_color=BORDER)
+                             corner_radius=6, height=30, width=btn_w,
+                             font=(FONT,11), border_width=1, border_color=BORDER)
             b.pack(side="left", padx=4)
             btns.append((b,v))
         return row, btns
@@ -249,7 +263,8 @@ class App(ctk.CTk):
                      font=(FONT,10), text_color=TEXT2).pack(anchor="w", pady=16)
 
         body = ctk.CTkFrame(p, fg_color="transparent"); body.pack(fill="both", expand=True)
-        body.columnconfigure(0,weight=2); body.columnconfigure(1,weight=3); body.rowconfigure(0,weight=1)
+        body.columnconfigure(0,weight=2,minsize=320); body.columnconfigure(1,weight=3,minsize=380)
+        body.rowconfigure(0,weight=1)
 
         left = self._card(body,"Configuração dos Discos"); left.grid(row=0,column=0,sticky="nsew",padx=12)
         frm = ctk.CTkFrame(left,fg_color="transparent"); frm.pack(fill="x",padx=18,pady=12)
@@ -332,13 +347,15 @@ class App(ctk.CTk):
         ctk.CTkLabel(right,text="Resultado do Array",font=(FONT,12,"bold"),text_color=TEXT1).pack(anchor="w",pady=10)
         g=ctk.CTkFrame(right,fg_color="transparent"); g.pack(fill="x",pady=10)
         g.columnconfigure(0,weight=1); g.columnconfigure(1,weight=1)
-        self.mc_rd=MetricCard(g,"HDs no Array"); self.mc_rd.grid(row=0,column=0,sticky="ew",padx=8,pady=8)
-        self.mc_rb=MetricCard(g,"Capacidade Bruta"); self.mc_rb.grid(row=0,column=1,sticky="ew",pady=8)
-        self.mc_ru=MetricCard(g,"Volume Disponível"); self.mc_ru.grid(row=1,column=0,sticky="ew",padx=8)
-        self.mc_re=MetricCard(g,"Eficiência de Uso"); self.mc_re.grid(row=1,column=1,sticky="ew")
+        g.rowconfigure(0,minsize=110); g.rowconfigure(1,minsize=110)
+        self.mc_rd=MetricCard(g,"HDs no Array"); self.mc_rd.grid(row=0,column=0,sticky="nsew",padx=4,pady=4)
+        self.mc_rb=MetricCard(g,"Capacidade Bruta"); self.mc_rb.grid(row=0,column=1,sticky="nsew",pady=4)
+        self.mc_ru=MetricCard(g,"Volume Disponível"); self.mc_ru.grid(row=1,column=0,sticky="nsew",padx=4)
+        self.mc_re=MetricCard(g,"Eficiência de Uso"); self.mc_re.grid(row=1,column=1,sticky="nsew")
 
         pc=self._card(right); pc.pack(fill="x",pady=10)
-        pt=ctk.CTkFrame(pc,fg_color="transparent"); pt.pack(fill="x",padx=16,pady=14)
+        pc.pack_propagate(False); pc.configure(height=90)
+        pt=ctk.CTkFrame(pc,fg_color="transparent"); pt.pack(fill="x",padx=16,pady=12)
         ctk.CTkLabel(pt,text="Aproveitamento do Storage",font=(FONT,10,"bold"),text_color=TEXT2).pack(side="left")
         self.lbl_pct_r=ctk.CTkLabel(pt,text="",font=(FONT,10,"bold"),text_color=GREEN_PRIMARY); self.lbl_pct_r.pack(side="right")
         self.pb_raid=ctk.CTkProgressBar(pc,fg_color=BG_FIELD,progress_color=GREEN_PRIMARY,height=10,corner_radius=5)
@@ -448,7 +465,8 @@ class App(ctk.CTk):
                      font=(FONT,10),text_color=TEXT2).pack(anchor="w",pady=16)
 
         body=ctk.CTkFrame(p,fg_color="transparent"); body.pack(fill="both",expand=True)
-        body.columnconfigure(0,weight=2); body.columnconfigure(1,weight=3); body.rowconfigure(0,weight=1)
+        body.columnconfigure(0,weight=2,minsize=320); body.columnconfigure(1,weight=3,minsize=380)
+        body.rowconfigure(0,weight=1)
 
         left=self._card(body,"Parâmetros de Gravação"); left.grid(row=0,column=0,sticky="nsew",padx=12)
         frm=ctk.CTkFrame(left,fg_color="transparent"); frm.pack(fill="x",padx=18,pady=12)
@@ -495,11 +513,12 @@ class App(ctk.CTk):
         ctk.CTkLabel(right,text="Resultado",font=(FONT,12,"bold"),text_color=TEXT1).pack(anchor="w",pady=10)
         g=ctk.CTkFrame(right,fg_color="transparent"); g.pack(fill="x",pady=10)
         g.columnconfigure(0,weight=1); g.columnconfigure(1,weight=1)
-        self.mc_cbt=MetricCard(g,"Bitrate Total"); self.mc_cbt.grid(row=0,column=0,sticky="ew",padx=8,pady=8)
-        self.mc_cpd=MetricCard(g,"Por câmera / dia"); self.mc_cpd.grid(row=0,column=1,sticky="ew",pady=8)
-        self.mc_cst=MetricCard(g,"Total Necessário"); self.mc_cst.grid(row=1,column=0,sticky="ew",padx=8)
-        self.mc_cd1=MetricCard(g,"Dias com 1 TB"); self.mc_cd1.grid(row=1,column=1,sticky="ew")
-        self.cam_sum=InfoBox(right); self.cam_sum.lbl.configure(wraplength=440); self.cam_sum.pack(fill="x",pady=10)
+        g.rowconfigure(0,minsize=110); g.rowconfigure(1,minsize=110)
+        self.mc_cbt=MetricCard(g,"Bitrate Total"); self.mc_cbt.grid(row=0,column=0,sticky="nsew",padx=4,pady=4)
+        self.mc_cpd=MetricCard(g,"Por câmera / dia"); self.mc_cpd.grid(row=0,column=1,sticky="nsew",pady=4)
+        self.mc_cst=MetricCard(g,"Total Necessário"); self.mc_cst.grid(row=1,column=0,sticky="nsew",padx=4)
+        self.mc_cd1=MetricCard(g,"Dias com 1 TB"); self.mc_cd1.grid(row=1,column=1,sticky="nsew")
+        self.cam_sum=InfoBox(right); self.cam_sum.configure(height=90); self.cam_sum.pack(fill="x",pady=10)
 
     def _upd_cam(self):
         try: cur=int(self.v_ncam.get())
@@ -536,18 +555,22 @@ class App(ctk.CTk):
 
         top=ctk.CTkFrame(p,fg_color="transparent"); top.pack(fill="x",pady=12)
         top.columnconfigure(0,weight=1); top.columnconfigure(1,weight=1); top.columnconfigure(2,weight=1)
-        self.mc_xr=MetricCard(top,"Disponível no RAID"); self.mc_xr.grid(row=0,column=0,sticky="ew",padx=8)
-        self.mc_xc=MetricCard(top,"Necessário pelas Câmeras"); self.mc_xc.grid(row=0,column=1,sticky="ew",padx=8)
-        self.mc_xl=MetricCard(top,"Saldo / Deficit"); self.mc_xl.grid(row=0,column=2,sticky="ew")
+        top.rowconfigure(0,weight=1)
+        self.mc_xr=MetricCard(top,"Disponível no RAID"); self.mc_xr.grid(row=0,column=0,sticky="nsew",padx=4)
+        self.mc_xc=MetricCard(top,"Necessário pelas Câmeras"); self.mc_xc.grid(row=0,column=1,sticky="nsew",padx=4)
+        self.mc_xl=MetricCard(top,"Saldo / Deficit"); self.mc_xl.grid(row=0,column=2,sticky="nsew")
 
         vc=self._card(p); vc.pack(fill="x",pady=12)
-        vr=ctk.CTkFrame(vc,fg_color="transparent"); vr.pack(fill="x",padx=18,pady=16)
-        self.lbl_vi=ctk.CTkLabel(vr,text="",font=(FONT,26)); self.lbl_vi.pack(side="left")
-        vt=ctk.CTkFrame(vr,fg_color="transparent"); vt.pack(side="left",padx=12)
+        vc.configure(height=90); vc.pack_propagate(False)
+        vr=ctk.CTkFrame(vc,fg_color="transparent"); vr.pack(fill="x",padx=18,pady=14)
+        self.lbl_vi=ctk.CTkLabel(vr,text="",font=(FONT,22)); self.lbl_vi.pack(side="left")
+        vt=ctk.CTkFrame(vr,fg_color="transparent"); vt.pack(side="left",padx=10,fill="x",expand=True)
         self.lbl_vt=ctk.CTkLabel(vt,text="Configure o RAID e as câmeras para ver a análise",
-                                  font=(FONT,12,"bold"),text_color=TEXT2); self.lbl_vt.pack(anchor="w")
-        self.lbl_vs=ctk.CTkLabel(vt,text="",font=(FONT,10),text_color=TEXT2,wraplength=600,justify="left")
-        self.lbl_vs.pack(anchor="w",pady=4)
+                                  font=(FONT,11,"bold"),text_color=TEXT2,anchor="w",wraplength=560)
+        self.lbl_vt.pack(anchor="w",fill="x")
+        self.lbl_vs=ctk.CTkLabel(vt,text="",font=(FONT,9),text_color=TEXT2,
+                                  wraplength=560,justify="left",anchor="w")
+        self.lbl_vs.pack(anchor="w",fill="x",pady=2)
 
         gc=self._card(p); gc.pack(fill="x",pady=12)
         gt=ctk.CTkFrame(gc,fg_color="transparent"); gt.pack(fill="x",padx=16,pady=14)
