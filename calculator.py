@@ -146,7 +146,7 @@ class App(ctk.CTk):
         right = ctk.CTkFrame(h, fg_color="transparent"); right.pack(side="right", padx=20)
         badge = ctk.CTkFrame(right, fg_color=GREEN_DARKER, corner_radius=14, border_width=1, border_color=GREEN_DARK)
         badge.pack()
-        ctk.CTkLabel(badge, text="v3.0 PRO", font=(FONT,9,"bold"), text_color=GREEN_PRIMARY).pack(padx=10, pady=5)
+        ctk.CTkLabel(badge, text="v3.1 PRO", font=(FONT,9,"bold"), text_color=GREEN_PRIMARY).pack(padx=10, pady=5)
 
         self._div_line = ctk.CTkFrame(self, fg_color="#222222", height=1, corner_radius=0)
         self._div_line.pack(fill="x")
@@ -539,7 +539,8 @@ class App(ctk.CTk):
         # Fator de eficiência do codec relativo ao H.264 (referência 1.0):
         # H.265/H.265+ comprime mais a mesma qualidade -> menos dado efetivo gravado
         # MJPEG comprime menos -> mais dado efetivo gravado
-        br_efetivo=br*comp
+        # FPS: referência 30fps (fator 1.0) -> menos quadros/seg = menos dado real gravado em CBR
+        br_efetivo=br*comp*(fps/30)
         mbps=(br_efetivo*ncam)/1000; gb_cam=(br_efetivo*3600*horas)/(8*1024*1024)
         total_tb=(gb_cam*ncam*dias)/1024; d1tb=(1024/(gb_cam*ncam)) if gb_cam*ncam>0 else 0
         self.mc_cbt.set(f"{mbps:.1f} Mbps",f"{br:.0f} Kbps configurado/câmera",GREEN_PRIMARY)
@@ -620,7 +621,7 @@ class App(ctk.CTk):
             comp=COMP_MAP.get(self.v_comp.get(),0.5); fps=int(self.v_fps.get().replace(" fps",""))
             dias=int(self.v_dias.get()); horas=int(self.v_horas.get())
             br=float(self.v_bitrate.get())
-            br_efetivo=br*comp
+            br_efetivo=br*comp*(fps/30)
             cam_tb=(br_efetivo*3600*horas*ncam*dias)/(8*1024*1024*1024)
         except: return
         livre=util_tb-cam_tb; pct=min((cam_tb/util_tb)*100,100) if util_tb>0 else 0
@@ -651,7 +652,8 @@ class App(ctk.CTk):
             n       = int(self.v_nhd.get())
             tam     = self._get_tam()
             tam_fab = float(self.v_thd.get().replace(" TB",""))
-            tam_tib = (tam_fab * BYTES_PER_TB) / BYTES_PER_TIB
+            conv_on_calc = getattr(self,"v_conv",None) and self.v_conv.get()
+            tam_tib = (tam_fab * BYTES_PER_TB) / BYTES_PER_TIB if conv_on_calc else tam_fab
             hs      = int(self.v_hs.get())
             raid    = self.v_raid.get()
             ncam    = int(self.v_ncam.get())
@@ -671,7 +673,8 @@ class App(ctk.CTk):
         util_tb = calc(dr,tam) if dr>=min_d else 0
         efic    = round((util_tb/bruto)*100) if bruto>0 else 0
         comp_fator = COMP_MAP.get(comp,0.5)
-        br_efetivo = br*comp_fator
+        fps_fator = int(fps.replace(" fps",""))/30
+        br_efetivo = br*comp_fator*fps_fator
         gb_cam  = (br_efetivo*3600*horas)/(8*1024*1024)
         cam_tb  = (gb_cam*ncam*dias)/1024
         mbps    = (br_efetivo*ncam)/1000
@@ -876,7 +879,7 @@ class App(ctk.CTk):
                 ["Parâmetro","Valor","Parâmetro","Valor"],
                 ["Tipo de RAID",             raid,                  "HDs ativos no array",    str(dr)],
                 ["Capacidade por HD (fab.)", f"{tam_fab:.1f} TB",   "Hot Spare(s)",           f"{hs} HD(s)"],
-                ["Capacidade por HD (TiB)",  f"{tam_tib:.4f} TiB",  "Capacidade útil por HD", cap_util_str],
+                ["Capacidade por HD (TiB)" if conv_on else "Capacidade por HD",  f"{tam_tib:.4f} TiB" if conv_on else f"{tam_tib:.1f} TB",  "Capacidade útil por HD", cap_util_str],
                 ["Capacidade bruta (útil)",  fmt(n*tam),            "Volume disponível",      fmt(util_tb)],
                 ["Overhead RAID",            fmt(bruto-util_tb),    "Eficiência RAID",        f"{efic}%"],
             ]
