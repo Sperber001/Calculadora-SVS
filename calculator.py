@@ -480,16 +480,19 @@ class App(ctk.CTk):
 
         ff2=self._fl(frm,"RESOLUÇÃO")
         self.v_res=tk.StringVar(value="1080p FullHD-2MP")
+        self.v_res.trace_add("write",lambda *_:self._calc_cam())
         self._combo(ff2,self.v_res,list(RES_MAP.keys()),cmd=self._calc_cam,width=260).pack(fill="x")
 
         r2=ctk.CTkFrame(frm,fg_color="transparent"); r2.pack(fill="x")
         c1=ctk.CTkFrame(r2,fg_color="transparent"); c1.pack(side="left",expand=True,fill="x",padx=8)
         ctk.CTkLabel(c1,text="COMPRESSÃO",font=(FONT,9,"bold"),text_color=TEXT3).pack(anchor="w",pady=5)
         self.v_comp=tk.StringVar(value="H.265/H.265+")
+        self.v_comp.trace_add("write",lambda *_:self._calc_cam())
         self._combo(c1,self.v_comp,list(COMP_MAP.keys()),cmd=self._calc_cam,width=120).pack(fill="x")
         c2=ctk.CTkFrame(r2,fg_color="transparent"); c2.pack(side="left",expand=True,fill="x")
         ctk.CTkLabel(c2,text="FPS",font=(FONT,9,"bold"),text_color=TEXT3).pack(anchor="w",pady=5)
         self.v_fps=tk.StringVar(value="15 fps")
+        self.v_fps.trace_add("write",lambda *_:self._calc_cam())
         self._combo(c2,self.v_fps,["1 fps","5 fps","10 fps","15 fps","20 fps","25 fps","30 fps"],cmd=self._calc_cam,width=100).pack(fill="x")
 
         ff3=self._fl(frm,"BITRATE POR CÂMERA (KBPS)")
