@@ -536,9 +536,13 @@ class App(ctk.CTk):
         except: return
         self._upd_cam()
         br=float(self.v_bitrate.get())
-        mbps=(br*ncam)/1000; gb_cam=(br*3600*horas)/(8*1024*1024)
+        # Fator de eficiência do codec relativo ao H.264 (referência 1.0):
+        # H.265/H.265+ comprime mais a mesma qualidade -> menos dado efetivo gravado
+        # MJPEG comprime menos -> mais dado efetivo gravado
+        br_efetivo=br*comp
+        mbps=(br_efetivo*ncam)/1000; gb_cam=(br_efetivo*3600*horas)/(8*1024*1024)
         total_tb=(gb_cam*ncam*dias)/1024; d1tb=(1024/(gb_cam*ncam)) if gb_cam*ncam>0 else 0
-        self.mc_cbt.set(f"{mbps:.1f} Mbps",f"{br:.0f} Kbps por câmera",GREEN_PRIMARY)
+        self.mc_cbt.set(f"{mbps:.1f} Mbps",f"{br:.0f} Kbps configurado/câmera",GREEN_PRIMARY)
         self.mc_cpd.set(fmt(gb_cam,"GB"),"por câmera por dia",TEXT1)
         self.mc_cst.set(fmt(total_tb),f"{ncam} câm. × {dias} dias x {horas}h",AMBER)
         self.mc_cd1.set(f"{d1tb:.1f} dias","de gravação por 1 TB",GREEN_PRIMARY)
@@ -616,7 +620,8 @@ class App(ctk.CTk):
             comp=COMP_MAP.get(self.v_comp.get(),0.5); fps=int(self.v_fps.get().replace(" fps",""))
             dias=int(self.v_dias.get()); horas=int(self.v_horas.get())
             br=float(self.v_bitrate.get())
-            cam_tb=(br*3600*horas*ncam*dias)/(8*1024*1024*1024)
+            br_efetivo=br*comp
+            cam_tb=(br_efetivo*3600*horas*ncam*dias)/(8*1024*1024*1024)
         except: return
         livre=util_tb-cam_tb; pct=min((cam_tb/util_tb)*100,100) if util_tb>0 else 0
         col=GREEN_PRIMARY if pct<70 else AMBER if pct<90 else RED
@@ -665,9 +670,11 @@ class App(ctk.CTk):
         bruto   = dr * tam
         util_tb = calc(dr,tam) if dr>=min_d else 0
         efic    = round((util_tb/bruto)*100) if bruto>0 else 0
-        gb_cam  = (br*3600*horas)/(8*1024*1024)
+        comp_fator = COMP_MAP.get(comp,0.5)
+        br_efetivo = br*comp_fator
+        gb_cam  = (br_efetivo*3600*horas)/(8*1024*1024)
         cam_tb  = (gb_cam*ncam*dias)/1024
-        mbps    = (br*ncam)/1000
+        mbps    = (br_efetivo*ncam)/1000
         d1tb    = (1024/(gb_cam*ncam)) if gb_cam*ncam>0 else 0
         livre   = util_tb - cam_tb
         pct     = min((cam_tb/util_tb)*100,100) if util_tb>0 else 0
@@ -897,7 +904,7 @@ class App(ctk.CTk):
                 ["Parâmetro","Valor","Parâmetro","Valor"],
                 ["Número de câmeras",   str(ncam),            "Resolução",            res],
                 ["Compressão",          comp,                  "FPS",                  fps],
-                ["Bitrate por câmera",  f"{br:.0f} Kbps",     "Bitrate total",        f"{mbps:.1f} Mbps"],
+                ["Bitrate configurado",  f"{br:.0f} Kbps",     "Bitrate total (efetivo)", f"{mbps:.1f} Mbps"],
                 ["Dias de retenção",    f"{dias} dias",        "Horas/dia gravando",   f"{horas}h"],
                 ["Por câmera / dia",    fmt(gb_cam,"GB"),      "Armazenamento total",  fmt(cam_tb)],
                 ["Dias com 1 TB",       f"{d1tb:.1f} dias",    "",                     ""],
